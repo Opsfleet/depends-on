@@ -10,8 +10,8 @@ of an init container, the main container also will be granted with these capabil
 
 # Building
 ```
-docker build . -t meshok0/depends-on:0.0.1
-docker push  meshok0/depends-on:0.0.1 
+docker build . -t meshok0/depends-on:0.1
+docker push  meshok0/depends-on:0.1
 ```
 
 # Installing to Kubernetes cluster

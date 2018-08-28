@@ -103,13 +103,13 @@ spec:
       serviceAccountName: depon-test-acc
       initContainers:
       - name: second-depon
-        image: registry.hub.docker.com/meshok0/depends-on:0.0.1
+        image: registry.hub.docker.com/meshok0/depends-on:0.1
         imagePullPolicy: Always
         args:
-        - "first-service"
+        - "-service=first-service"
+        - "-check_interval=2"
       containers:
       - name: second
         image: busybox
         command: ["/bin/sh", "-c"]
         args: ["sleep 9999"]
-

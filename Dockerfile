@@ -2,7 +2,6 @@ FROM golang as builder
 
 RUN useradd -r appuser
 
-#COPY tmp_gopath/ $GOPATH/
 COPY src $GOPATH/src/depends-on/
 WORKDIR $GOPATH/src/depends-on/
 

@@ -3,17 +3,33 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
+	"strings"
+	"flag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"os"
-	"time"
 )
 
-func main() {
+type arrayFlags []string
+func (i *arrayFlags) String() string {
+	return strings.Join(*i, ",")
+}
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, strings.TrimSpace(value))
+	return nil
+}
 
-	services := os.Args[1:]
+var services arrayFlags
+var checkInterval int
+
+
+func main() {
+	flag.Var(&services, "service", "Service, which pods to wait for. Can be specified multiple times")
+	flag.IntVar(&checkInterval, "check_interval", 5, "Seconds to wait between check attempts")
+	flag.Parse()
+
 	nsb, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		panic(err.Error())
@@ -76,7 +92,7 @@ func main() {
 			if ready_pod_found == true {
 				break
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(time.Duration(checkInterval) * time.Second)
 		}
 	}
 }
