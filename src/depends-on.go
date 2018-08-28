@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"os"
 )
 
 type arrayFlags []string
@@ -30,6 +31,11 @@ func main() {
 	flag.IntVar(&checkInterval, "check_interval", 5, "Seconds to wait between check attempts")
 	flag.Parse()
 
+	if len(services) == 0 {
+		fmt.Println("No services provided. Exiting...")
+		os.Exit(0)
+	}
+
 	nsb, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		panic(err.Error())
@@ -47,6 +53,7 @@ func main() {
 		panic(err.Error())
 	}
 
+	//TODO: import revision
 	//TODO: rewrite with watch?
 	//TODO: implement waiting for Jobs? (not needed if Helm is used)
 
