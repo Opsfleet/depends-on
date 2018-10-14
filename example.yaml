@@ -1,0 +1,115 @@
+---
+{
+  "kind": "Namespace",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "depon-test",
+    "labels": {
+      "name": "depon-test"
+    }
+  }
+}
+
+---
+
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: depon-test-role
+rules:
+- apiGroups: [""]
+  resources: ["pods","services"]
+  verbs: ["get", "list", "watch"]
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: depon-test-acc
+
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: depon-test-binding
+subjects:
+- kind: ServiceAccount
+  name: depon-test-acc
+roleRef:
+  kind: Role
+  name: depon-test-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: first
+spec:
+  replicas: 2
+  template:
+    metadata:
+      name: first
+      labels:
+        app: first
+    spec:
+      containers:
+      - name: first
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args: ["sleep 30; echo ready > /tmp/test; sleep 9999"]
+        readinessProbe:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - "cat /tmp/test"
+          periodSeconds: 5
+          failureThreshold: 1
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: first-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: dummy
+  selector:
+    app: first
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: second
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: second
+      labels:
+        app: second
+    spec:
+      serviceAccountName: depon-test-acc
+      initContainers:
+      - name: second-depon
+        image: registry.hub.docker.com/meshok0/depends-on:0.1
+        imagePullPolicy: Always
+        args:
+        - "-service=first-service"
+        - "-check_interval=2"
+      containers:
+      - name: second
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args: ["sleep 9999"]
