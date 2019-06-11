@@ -1,0 +1,80 @@
+# The first deployment creates a pod that waits 30 seconds before becoming available
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: first
+spec:
+  replicas: 2
+  template:
+    metadata:
+      name: first
+      labels:
+        app: first
+    spec:
+      containers:
+      - name: first
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            echo 'Waiting for 30 seconds before starting up...' &&
+            sleep 30 &&
+            echo ready > /tmp/ready &&
+            sleep 9999
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - cat /tmp/ready
+          periodSeconds: 5
+          failureThreshold: 1
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: first
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: first
+
+---
+
+# The second services waits until at least one pod from the first deployment
+# becomes available and only then starts.
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: second
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: second
+      labels:
+        app: second
+    spec:
+      initContainers:
+      - name: wait-for-first
+        image: opsfleet/depends-on
+        imagePullPolicy: Always
+        args:
+        - -service=first
+        - -check_interval=2
+      containers:
+      - name: second
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            echo 'Second service is available' &&
+            sleep 9999
+
