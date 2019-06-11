@@ -1,10 +1,31 @@
+# The first job waits 15 seconds before completion
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: first
+spec:
+  template:
+    spec:
+      containers:
+        - name: first
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+          - >
+            echo 'Waiting for 15 seconds before exiting...' &&
+            sleep 15
+      restartPolicy: Never
+
+---
 # The first deployment creates a pod that waits 30 seconds before becoming available
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: first
 spec:
-  replicas: 2
+  selector:
+    matchLabels:
+      app: first
   template:
     metadata:
       name: first
@@ -50,12 +71,14 @@ spec:
 
 # The second services waits until at least one pod from the first deployment
 # becomes available and only then starts.
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: second
 spec:
-  replicas: 1
+  selector:
+    matchLabels:
+      app: second
   template:
     metadata:
       name: second
@@ -67,6 +90,7 @@ spec:
         image: opsfleet/depends-on
         imagePullPolicy: Always
         args:
+        - -job=first
         - -service=first
         - -check_interval=2
       containers:
@@ -75,6 +99,5 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
           - >
-            echo 'Second service is available' &&
+            echo 'First job is completed and first service is available' &&
             sleep 9999
-
