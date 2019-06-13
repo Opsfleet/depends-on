@@ -16,9 +16,9 @@ This small utility solves that problem and helps you minimize the time it takes 
 
 # The solution
 
-What if you could specify which services a pod should wait for before starting up? Or in short - the services it depends(-)on?
+What if you could specify which services and/or jobs a pod should wait for before starting up? Or in short - the services and/or jobs it depends(-)on?
 
-This small container allows you to add an `InitContainer` hook to all of your deployment YAML files to create a dependency relationship to other services in the same namespace:
+This small container allows you to add an `InitContainer` hook to all of your deployment YAML files to create a dependency relationship to other services and/or jobs in the same namespace:
 
 ```
 initContainers:
@@ -27,14 +27,20 @@ initContainers:
   args:
   - "-service=mongodb"
   - "-service=rabbitmq"
-  - "-service=elasticsearch"
+  - "-job=myjob"
 ```
 
 ## How it works
 
-The logic isn't that complicated - the utility will block and periodically query the Kuberentes API until it finds at least one available endpoint for all the specified services.
+The logic isn't that complicated. The utility queries the Kuberentes API with the specified check interval.  
+
+First, it waits for the specified services and jobs to be present. 
+
+Then, for services, it looks for at least one available endpoint for each of the specified services.  
 
 If you've configured your readiness probes correctly, depends-on will wait until at least one pod for each service you've specified becomes available.
+
+For jobs, it blocks until they successfully completed - i.e. status became "Succeeded".  
 
 ## Note: RBAC & Service account permissions
 
@@ -50,8 +56,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: depends-on-role
 rules:
-- apiGroups: [""]
-  resources: ["pods", "services"]
+- apiGroups: ["batch", "apps", ""]
+  resources: ["pods", "services", "jobs"]
   verbs: ["get", "list", "watch"]
 
 ---
@@ -72,7 +78,7 @@ roleRef:
 
 ## Examples
 
-For convenience, we've also included a few examples in the `examples/` directory. Feel free to copy-pasta from YAML files in that directory, they should provide everything you need to get going.
+For convenience, we've also included a few examples in the `examples/` directory. Feel free to copy-paste from YAML files in that directory, they should provide everything you need to get going.
 
 # Contributing
 
